@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>自闭症儿童社交机器人 - 网页版</title>
+<style>
+    /* 保留所有原有样式，仅新增加载样式 */
+    body {
+        font-family: Arial, sans-serif;
+        background: #f9fcff;
+        margin: 0;
+        padding: 0;
+        color: #333;
+    }
+    .container {
+        max-width: 600px;
+        margin: 20px auto;
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 0 12px rgba(0,0,0,0.05);
+        padding: 20px;
+    }
+    .emotion-page {
+        text-align: center;
+        padding: 30px 0;
+    }
+    .emotion-title {
+        font-size: 24px;
+        margin-bottom: 30px;
+    }
+    .emotion-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        padding: 0 20px;
+    }
+    .emotion-btn {
+        padding: 25px 10px;
+        border-radius: 20px;
+        border: none;
+        font-size: 22px;
+        cursor: pointer;
+        background: #e3f2fd;
+    }
+    .emotion-btn:hover {
+        background: #bbdefb;
+    }
+    .robot-avatar {
+        width: 60px;
+        height: 60px;
+        background: #e3f2fd;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        float: left;
+    }
+    .robot-avatar img {
+        width: 40px;
+    }
+    .chat-box {
+        height: 400px;
+        overflow-y: auto;
+        padding: 15px;
+        background: #ffffff;
+        border-radius: 16px;
+        margin-bottom: 20px;
+    }
+    .msg {
+        margin-bottom: 18px;
+        display: flex;
+        max-width: 80%;
+    }
+    .robot-msg {
+        margin-right: auto;
+    }
+    .user-msg {
+        margin-left: auto;
+        flex-direction: row-reverse;
+    }
+    .msg-bubble {
+        padding: 12px 18px;
+        border-radius: 18px;
+        font-size: 20px;
+        line-height: 1.4;
+    }
+    .robot-msg .msg-bubble {
+        background: #e3f2fd;
+        border-top-left-radius: 0;
+    }
+    .user-msg .msg-bubble {
+        background: #f0f7ff;
+        border-top-right-radius: 0;
+    }
+    .input-area {
+        display: flex;
+        gap: 10px;
+    }
+    #user-input {
+        flex: 1;
+        padding: 15px;
+        font-size: 20px;
+        border: 2px solid #e0e0e0;
+        border-radius: 16px;
+        outline: none;
+    }
+    #send-btn {
+        background: #64b5f6;
+        color: white;
+        border: none;
+        padding: 15px 25px;
+        border-radius: 16px;
+        font-size: 20px;
+        cursor: pointer;
+    }
+    #send-btn:hover {
+        background: #42a5f5;
+    }
+    .buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .btn {
+        flex: 1;
+        padding: 14px;
+        border-radius: 16px;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        background: #e3f2fd;
+    }
+    .btn:hover {
+        background: #bbdefb;
+    }
+    .admin-entry {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 10px 15px;
+        background: #90caf9;
+        color: white;
+        border-radius: 10px;
+        font-size: 16px;
+        cursor: pointer;
+        border: none;
+    }
+    .risk-alert {
+        color: #e53935;
+        font-size: 18px;
+        text-align: center;
+        margin: 10px 0;
+        display: none;
+    }
+    .loading {
+        text-align: center;
+        font-size: 18px;
+        color: #666;
+        margin: 10px 0;
+        display: none;
+    }
+</style>
+</head>
+
+<body>
+<!-- 情绪选择页（初始显示） -->
+<div class="container emotion-page" id="emotion-page">
+    <div class="emotion-title">你现在感觉怎么样？</div>
+    <div class="emotion-buttons">
+        <button class="emotion-btn" onclick="startChat('开心')">开心 😊</button>
+        <button class="emotion-btn" onclick="startChat('生气')">生气 😠</button>
+        <button class="emotion-btn" onclick="startChat('难过')">难过 😢</button>
+        <button class="emotion-btn" onclick="startChat('害怕')">害怕 😱</button>
+    </div>
+</div>
+
+<!-- 聊天页（初始隐藏） -->
+<div class="container" id="chat-page" style="display: none;">
+    <div class="risk-alert" id="risk-alert">⚠️ 检测到特殊内容，请家长及时关注！</div>
+    <div class="loading" id="loading">小助手正在思考中...</div>
+    <div class="chat-box" id="chat-box">
+        <div class="msg robot-msg">
+            <div class="msg-bubble" id="welcome-msg">你好，我在这里，别怕～</div>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <input id="user-input" placeholder="输入文字…" autocomplete="off" onkeydown="if(event.keyCode===13)sendMessage()">
+        <button id="send-btn" onclick="sendMessage()">发送</button>
+    </div>
+
+    <div class="buttons">
+        <button class="btn" onclick="sendCustom('深呼吸，慢慢来～')">安抚</button>
+        <button class="btn" onclick="sendCustom('看着我，你真棒！')">社交鼓励</button>
+        <button class="btn" onclick="sendCustom('我们再试一次～')">重复</button>
+    </div>
+</div>
+
+<!-- 家长后台页（初始隐藏） -->
+<div class="container" id="admin-page" style="display: none;">
+    <h2 style="font-size: 24px; text-align: center; margin-bottom: 20px;">孩子聊天记录</h2>
+    <div id="record-list" style="font-size: 18px; line-height: 1.8;"></div>
+    <button class="btn" style="margin-top: 20px;" onclick="backToChat()">返回聊天</button>
+</div>
+
+<!-- 后台入口按钮 -->
+<button class="admin-entry" onclick="showAdminPage()">家长后台</button>
+
+<script>
+// 讯飞星火X2版本配置（HTTP接口）
+const API_KEY = "b47d296a3609eb6ab5b32981adfe84eb";
+const API_SECRET = "MzNmNTgxNDViNTAzMDIzZTU1OWZlNTZh";
+const API_URL = "https://spark-api-open.xf-yun.com/x2/chat/completions";
+const MODEL = "spark-x"; // X2版本对应模型
+
+// 全局变量
+let currentEmotion = "";
+let chatRecords = JSON.parse(localStorage.getItem("chatRecords")) || [];
+let conversationHistory = []; // 会话上下文
+
+// 1. 调用讯飞星火X2 HTTP接口
+async function callSparkXAPI(userInput) {
+    // 显示加载状态
+    document.getElementById("loading").style.display = "block";
+
+    // 构建会话上下文（保留最近5轮）
+    conversationHistory.push({
+        role: "user",
+        content: userInput
+    });
+    if (conversationHistory.length > 10) { // 最多保留5轮（user+assistant）
+        conversationHistory = conversationHistory.slice(-10);
+    }
+
+    // 构造请求体
+    const requestBody = {
+        model: MODEL,
+        messages: [
+            {
+                role: "system",
+                content: `你是面向3-10岁自闭症儿童的社交陪伴机器人。要求：1.说话句子必须5–8个字，简短、简单、清晰；2.语气温和、耐心、不催促、不批评、不指责；3.孩子重复说话时保持耐心；4.优先安抚情绪，再交流；5.多用鼓励语（真棒、没关系、慢慢来、你很勇敢）；6.不使用复杂词、比喻、表情符号、网络用语；7.引导社交（看着我、该你啦、我们一起、轮流）；8.输出必须温柔、稳定、可预测；9.结合孩子当前情绪【${currentEmotion}】做针对性回应。`
+            },
+            ...conversationHistory
+        ],
+        temperature: 0.2, // 低随机性
+        max_tokens: 30,    // 限制回复长度
+        top_p: 0.1,
+        stream: false      // 非流式输出，更简单
+    };
+
+    try {
+        // 发送请求
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${API_KEY}` // X2版本简化授权
+            },
+            body: JSON.stringify(requestBody),
+            timeout: 10000
+        });
+
+        const result = await response.json();
+        
+        // 隐藏加载状态
+        document.getElementById("loading").style.display = "none";
+
+        // 处理返回结果
+        if (result.choices && result.choices.length > 0) {
+            let aiReply = result.choices[0].message.content.trim();
+            
+            // 兜底校验：确保回复长度5-8字
+            const fallbackReplies = {
+                "开心": ["你真棒，真开心～", "开心就笑一笑～", "和我分享开心吧～"],
+                "生气": ["别生气，慢慢来～", "生气可以说出来～", "我听你说，不着急～"],
+                "难过": ["别难过，我陪你～", "难过就哭出来～", "会好的，别怕～"],
+                "害怕": ["别害怕，我在呢～", "不怕不怕，加油～", "我保护你～"]
+            };
+            if (aiReply.length < 5 || aiReply.length > 8) {
+                aiReply = fallbackReplies[currentEmotion][Math.floor(Math.random()*3)];
+            }
+
+            // 保存上下文
+            conversationHistory.push({
+                role: "assistant",
+                content: aiReply
+            });
+
+            return aiReply;
+        } else {
+            throw new Error("无有效回复");
+        }
+    } catch (error) {
+        console.error("接口调用失败：", error);
+        document.getElementById("loading").style.display = "none";
+        // 兜底回复
+        const fallbackReplies = {
+            "开心": ["你真棒，真开心～", "开心就笑一笑～", "和我分享开心吧～"],
+            "生气": ["别生气，慢慢来～", "生气可以说出来～", "我听你说，不着急～"],
+            "难过": ["别难过，我陪你～", "难过就哭出来～", "会好的，别怕～"],
+            "害怕": ["别害怕，我在呢～", "不怕不怕，加油～", "我保护你～"]
+        };
+        return fallbackReplies[currentEmotion][Math.floor(Math.random()*3)];
+    }
+}
+
+// 2. 核心功能逻辑
+function startChat(emotion) {
+    currentEmotion = emotion;
+    document.getElementById("emotion-page").style.display = "none";
+    document.getElementById("chat-page").style.display = "block";
+    const welcomeMsg = {
+        "开心": "你开心，我也开心～",
+        "生气": "别生气，我陪着你～",
+        "难过": "别难过，会好起来的～",
+        "害怕": "别害怕，我保护你～"
+    };
+    document.getElementById("welcome-msg").innerText = welcomeMsg[emotion];
+    speakText(welcomeMsg[emotion]);
+}
+
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-CN';
+        utterance.rate = 0.8;
+        utterance.pitch = 1.2;
+        speechSynthesis.speak(utterance);
+    }
+}
+
+function checkRiskContent(text) {
+    const riskWords = ["打自己", "不想活", "难受死了", "我好痛苦", "想伤害自己"];
+    return riskWords.some(word => text.includes(word));
+}
+
+async function sendMessage() {
+    const input = document.getElementById("user-input");
+    const text = input.value.trim();
+    if (!text) return;
+
+    // 风险检测
+    const isRisk = checkRiskContent(text);
+    if (isRisk) {
+        document.getElementById("risk-alert").style.display = "block";
+        setTimeout(() => {
+            document.getElementById("risk-alert").style.display = "none";
+        }, 3000);
+    }
+
+    // 添加用户消息
+    addMessage(text, "user");
+    saveRecord(text, "user", isRisk);
+    input.value = "";
+
+    // 调用讯飞接口获取回复
+    const aiReply = await callSparkXAPI(text);
+    addMessage(aiReply, "robot");
+    saveRecord(aiReply, "robot", false);
+    speakText(aiReply);
+}
+
+function sendCustom(text) {
+    addMessage(text, "robot");
+    saveRecord(text, "robot", false);
+    speakText(text);
+    // 保存自定义回复到上下文
+    conversationHistory.push({
+        role: "assistant",
+        content: text
+    });
+}
+
+function addMessage(text, sender) {
+    const box = document.getElementById("chat-box");
+    const div = document.createElement("div");
+    div.className = `msg ${sender}-msg`;
+    const bubble = document.createElement("div");
+    bubble.className = "msg-bubble";
+    bubble.innerText = text;
+    div.appendChild(bubble);
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+function saveRecord(content, sender, isRisk) {
+    const record = {
+        time: new Date().toLocaleString(),
+        emotion: currentEmotion,
+        sender: sender === "user" ? "孩子" : "机器人",
+        content: content,
+        isRisk: isRisk
+    };
+    chatRecords.push(record);
+    if (chatRecords.length > 50) chatRecords.shift();
+    localStorage.setItem("chatRecords", JSON.stringify(chatRecords));
+}
+
+function showAdminPage() {
+    document.getElementById("chat-page").style.display = "none";
+    document.getElementById("emotion-page").style.display = "none";
+    document.getElementById("admin-page").style.display = "block";
+    const recordList = document.getElementById("record-list");
+    if (chatRecords.length === 0) {
+        recordList.innerText = "暂无聊天记录";
+        return;
+    }
+    let html = "";
+    chatRecords.forEach((item, index) => {
+        const riskTag = item.isRisk ? "<span style='color:red'>【高风险】</span>" : "";
+        html += `${index+1}. ${item.time} | 情绪：${item.emotion} | ${item.sender}：${item.content} ${riskTag}<br>`;
+    });
+    recordList.innerHTML = html;
+}
+
+function backToChat() {
+    document.getElementById("admin-page").style.display = "none";
+    document.getElementById("chat-page").style.display = "block";
+}
+</script>
+</body>
+</html>
